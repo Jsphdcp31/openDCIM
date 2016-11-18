@@ -56,10 +56,10 @@
 		$template->TemplateID=$_POST['TemplateID'];
 		if($template->GetTemplateByID()){
 			// First deal with the case that we are transferring
-			if($template->TemplateID!=$_POST['transferid'] && $_POST['transferid']==0){
+			if($template->TemplateID!=$_POST['transferid'] && $_POST['transferid']!=0){
 				// We should do this in bulk,  this has potential to be a real time sink
 				foreach(Device::GetDevicesByTemplate($template->TemplateID) as $dev){
-					$dev->TemplateID->$_POST['transferid'];
+					$dev->TemplateID=$_POST['transferid'];
 					$dev->UpdateDevice();
 				}
 			}
@@ -170,7 +170,7 @@
 						if(isset($currentdca["required"]) && $currentdca["required"] == "on") {
 							$requiredval = 1;
 						}
-						$status=($template->InsertCustomValue($dcaid, $insertval,$requiredval))?$status:__('Error updating device template custom values');
+						$status=($template->InsertCustomValue($dcaid, $insertval,$requiredval))?$status:__("Error updating device template custom values");
 					} elseif(array_key_exists($dcaid, $dcaList) && $dcaList[$dcaid]->AllDevices==1) {
 					/* since the enabled checkbox for attributes marked as "all devices" is disabled, it doesn't get passed in with the form,
 						so parse through and if the value or required status are different than the defaults, add a row for them as well. this
@@ -185,7 +185,7 @@
 							$requiredval = 1;
 						}
 						if(($insertval != $dcaList[$dcaid]->DefaultValue) || ($requiredval != $dcaList[$dcaid]->Required)) {
-							$status=($template->InsertCustomValue($dcaid, $insertval, $requiredval))?$status:__('Error updating device template custom values');
+							$status=($template->InsertCustomValue($dcaid, $insertval, $requiredval))?$status:__("Error updating device template custom values");
 						}
 					}
 				}
@@ -203,7 +203,7 @@
 			$sensortemplate->TempMultiplier=$_POST['TempMultiplier'];
 			$sensortemplate->HumidityMultiplier=$_POST['HumidityMultiplier'];
 			$sensortemplate->mUnits=$_POST['mUnits'];
-			$status=($sensortemplate->UpdateTemplate())?$status:__('Error updating cdu attributes');
+			$status=($sensortemplate->UpdateTemplate())?$status:__("Error updating cdu attributes");
 			return $status;
 		}
 
@@ -225,7 +225,7 @@
 			$cdutemplate->Voltage=$_POST["Voltage"];
 			$cdutemplate->Amperage=$_POST["Amperage"];
 			$cdutemplate->NumOutlets=$template->PSCount;
-			$status=($cdutemplate->UpdateTemplate())?$status:__('Error updating cdu attributes');
+			$status=($cdutemplate->UpdateTemplate())?$status:__("Error updating cdu attributes");
 
 			return $status;
 		}
@@ -614,7 +614,9 @@
 						$.post('',{TemplateID: $('#TemplateID').val(), transferid: ((typeof TemplateID2=='undefined')?0:TemplateID2.val()), deleteme: ''}).done(function(data){
 							if(data.trim()==1){
 								dialog.dialog("destroy");
-								window.location=window.location.href;
+								// seems like a good idea to direct them to the new template
+								// rather than just a new template
+								$('#TemplateID').val(TemplateID2.val()).trigger('change');
 							}else{
 								alert("something is broken");
 							}

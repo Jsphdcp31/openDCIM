@@ -52,8 +52,7 @@
 		$panel->getPanel();
 		$pdu->PanelID = $panel->PanelID;
 		$pduList=$pdu->GetPDUbyPanel();
-		
-		$panelLoad = sprintf( "%01.2F", $panel->GetPanelLoad() / 1000 );
+
 		$panelCap = $panel->PanelVoltage * $panel->MainBreakerSize * sqrt(3);
 		
 		$decimalplaces=0;
@@ -80,12 +79,24 @@
 
 		$mtarray=implode(",",explode(" ",$dataMajorTicks));
 		$hilights = sprintf( "{from: 0, to: %.0${decimalplaces}lf, color: '#eee'}, {from: %.0${decimalplaces}lf, to: %.0${decimalplaces}lf, color: '#fffacd'}, {from: %.0${decimalplaces}lf, to: %.0${decimalplaces}lf, color: '#eaa'}", $panelCap / 1000 * .6, $panelCap / 1000 * .6, $panelCap / 1000 * .8, $panelCap / 1000 * .8, $panelCap / 1000);
+		
+		$panelLoad = sprintf( "%.0${decimalplaces}lf", PowerPanel::getInheritedLoad($panel->PanelID) / 1000 );
+		$msrLoad = sprintf( "%.0${decimalplaces}lf", $panel->getPanelLoad() / 1000 );
+		$estLoad = sprintf( "%.0${decimalplaces}lf", PowerPanel::getEstimatedLoad($panel->PanelID) / 1000 );
+
 		// Generate JS for load display
+
+		$inheritTitle = __("Inherited Meter Load");
+		$estimateTitle = __("Estimated Load");
+		$measuredTitle = __("Panel Meter Load");
+		
 		$script="
-	var gauge=new Gauge({
-		renderTo: 'power-gauge',
+	var pwrGauge=new Gauge({
+		height: 175,
+		width: 175,
+		renderTo: 'power-inherited',
 		type: 'canv-gauge',
-		title: 'Load',
+		title: '$inheritTitle',
 		minValue: '0',
 		maxValue: '$dataMaxValue',
 		majorTicks: [ $mtarray ],
@@ -105,8 +116,64 @@
 			},
 		highlights: [ $hilights ],
 		});
-	gauge.draw().setValue($panelLoad);
-";
+	pwrGauge.draw().setValue($panelLoad);
+
+	var estGauge=new Gauge({
+		height: 175,
+		width: 175,
+		renderTo: 'power-estimate',
+		type: 'canv-gauge',
+		title: '$estimateTitle',
+		minValue: '0',
+		maxValue: '$dataMaxValue',
+		majorTicks: [ $mtarray ],
+		minorTicks: '2',
+		strokeTicks: false,
+		units: 'kW',
+		valueFormat: { int : 3, dec : 2 },
+		glow: false,
+		animation: {
+			delay: 10,
+			duration: 200,
+			fn: 'bounce'
+			},
+		colors: {
+			needle: {start: '#f00', end: '#00f' },
+			title: '#00f',
+			},
+		highlights: [ $hilights ],
+		});
+	estGauge.draw().setValue($estLoad);
+
+	var msrGauge=new Gauge({
+		height: 175,
+		width: 175,
+		renderTo: 'power-measured',
+		type: 'canv-gauge',
+		title: '$measuredTitle',
+		minValue: '0',
+		maxValue: '$dataMaxValue',
+		majorTicks: [ $mtarray ],
+		minorTicks: '2',
+		strokeTicks: false,
+		units: 'kW',
+		valueFormat: { int : 3, dec : 2 },
+		glow: false,
+		animation: {
+			delay: 10,
+			duration: 200,
+			fn: 'bounce'
+			},
+		colors: {
+			needle: {start: '#f00', end: '#00f' },
+			title: '#00f',
+			},
+		highlights: [ $hilights ],
+		});
+	msrGauge.draw().setValue($msrLoad);
+	";
+
+
 /*
   Example for updating the gauge later.  This will start an endless loop that will update
   the gauge once a second.
@@ -253,7 +320,12 @@ echo '	</select></div>
 	// Build a panel schedule if this is not a new panel being created
 	// Also show the power gauge
 	if($panel->PanelID >0){
-		echo '<div><canvas id="power-gauge" width="200" height="200"></canvas></div>';
+		echo '
+<div class="pwr_gauge"><canvas id="power-measured" width="150" height="150"></canvas></div>
+<div class="pwr_gauge"><canvas id="power-inherited" width="150" height="150"></canvas></div>
+<div class="pwr_gauge"><canvas id="power-estimate" width="150" height="150"></canvas></div>
+
+';
 	
 		$panelSchedule=$panel->getPanelSchedule();
 		print "<center><h2>".__("Panel Schedule")."</h2></center>\n<table>";

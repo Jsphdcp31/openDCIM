@@ -156,12 +156,13 @@ function convertImgToBase64(url, imgobj) {
 	};
 }
 
+	var arr_localmanf=new Array();
+	var arr_localmodified=new Array();
+
 	$(document).ready(function(){
 		var select_manufacturerid=$('<select>').prop({'id':'slct_ManufacturerID'});
 		var div_results=$('<div>').prop({'id':'results'});
 		var tbl_results=$('<div>').addClass('table');
-		var arr_localmanf=new Array();
-		var arr_localmodified=new Array();
 
 		$.post('',{'getModifiedTimes':''},function(data){
 			arr_localmodified=data;
@@ -434,6 +435,8 @@ function convertImgToBase64(url, imgobj) {
 			for(var key in arr_localmanf){
 				if(arr_localmanf[key] === row.data("globaldev").ManufacturerID){
 					row.data("globaldev").ManufacturerID=key;
+					// Prevent further matches
+					break;
 				}
 			}
 
@@ -843,6 +846,9 @@ function convertImgToBase64(url, imgobj) {
 					if(data.errorcode==200 && !data.error){
 						var nameorid=(row.local.ManufacturerID==0)?row.local.Name:row.local.ManufacturerID;
 						var postorput=(row.local.ManufacturerID==0)?'put':'post';
+
+						// S.U.T. #4831 - Submit a manufacturer with a / to the api name
+						nameorid=encodeURIComponent(nameorid);
 
 						// Update local record with data from master
 						$.ajax({
